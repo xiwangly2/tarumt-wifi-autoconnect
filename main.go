@@ -3,120 +3,112 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 	"time"
 )
 
-const (
-	loginURL     = "https://connect.tarc.edu.my/login"
-	tarumtWiFiIP = "2.2.2.2"
-	accountFile  = "./config.json"
-	timeout      = 10 * time.Second
-	maxRetries   = 3
-)
-
-type Account struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
+type Config struct {
+	Username     string `json:"username"`
+	Password     string `json:"password"`
+	LoginURL     string `json:"loginURL"`
+	StatusURL    string `json:"statusURL"`
+	RefererURL   string `json:"refererURL"`
+	OriginURL    string `json:"originURL"`
+	WiFiIP       string `json:"WiFiIP"`
+	UserAgent    string `json:"userAgent"`
+	MaxAttempts  int    `json:"max_attempts"`
+	AttemptDelay int    `json:"attemptDelay"`
+	OnlyOnce     bool   `json:"onlyOnce"`
 }
 
 func main() {
-	fmt.Println("TAR UMT WiFi Auto Connect Program")
+	configFile := flag.String("config", "./config.json", "Path to the configuration file")
+	flag.Parse()
 
-	account, err := getAccountData()
+	config, err := loadConfig(*configFile)
 	if err != nil {
-		fmt.Println("Error reading account data:", err)
+		fmt.Printf("[%s] Failed to read configuration file: %v\n", currentTime(), err)
 		return
 	}
 
-	if !isConnectedToTARUMTWiFi() {
-		fmt.Println("❌ You are not connected to TAR UMT WiFi")
-		return
-	}
+	client := &http.Client{Timeout: 5 * time.Second}
 
-	if err := login(account, 0); err != nil {
-		fmt.Println("❌ Login failed:", err)
-	} else {
-		fmt.Println("✅ You are now connected to TAR UMT WiFi")
+	for {
+		loginIfNeeded(config, client)
+		if config.OnlyOnce {
+			break
+		}
+		time.Sleep(time.Duration(config.AttemptDelay) * time.Second)
 	}
 }
 
-func getAccountData() (*Account, error) {
-	file, err := os.Open(accountFile)
+func loginIfNeeded(config *Config, client *http.Client) {
+	resp, err := client.Get(config.StatusURL)
+	if err == nil && resp.StatusCode >= 200 && resp.StatusCode < 300 {
+		body, err := io.ReadAll(resp.Body)
+		_ = resp.Body.Close()
+
+		if err == nil {
+			responseBody := string(body)
+
+			if strings.Contains(responseBody, "If you are not redirected in a few seconds") {
+				data := url.Values{
+					"username": {config.Username},
+					"password": {config.Password},
+					"dst":      {"https://google.com"},
+				}
+
+				req, err := http.NewRequest("POST", config.LoginURL, bytes.NewBufferString(data.Encode()))
+				if err != nil {
+					logMessage(fmt.Sprintf("Error creating request: %v", err))
+					return
+				}
+
+				req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+				req.Header.Set("User-Agent", config.UserAgent)
+				req.Header.Set("Referer", "https://wifi2.tarc.edu.my/")
+				req.Header.Set("Origin", "https://wifi2.tarc.edu.my")
+
+				resp, err := client.Do(req)
+				if err != nil {
+					logMessage(fmt.Sprintf("Error during login: %v", err))
+				} else {
+					body, err := io.ReadAll(resp.Body)
+					_ = resp.Body.Close()
+					if err == nil && bytes.Contains(body, []byte("You are logged in")) {
+						logMessage("Login successful")
+					} else {
+						logMessage("Login failed, please check your username and password")
+					}
+				}
+			}
+		}
+	}
+}
+
+func currentTime() string {
+	return time.Now().Format("2006-01-02 15:04:05")
+}
+
+func logMessage(msg string) {
+	fmt.Printf("[%s] %s\n", currentTime(), msg)
+}
+
+func loadConfig(filename string) (*Config, error) {
+	data, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, err
 	}
-	defer func(file *os.File) {
-		err := file.Close()
-		if err != nil {
-		}
-	}(file)
-
-	var account Account
-	if err := json.NewDecoder(file).Decode(&account); err != nil {
+	var config Config
+	err = json.Unmarshal(data, &config)
+	if err != nil {
 		return nil, err
 	}
-	return &account, nil
-}
-
-func isConnectedToTARUMTWiFi() bool {
-	addrs, err := net.LookupIP("connect.tarc.edu.my")
-	if err != nil {
-		return false
-	}
-	for _, addr := range addrs {
-		if addr.String() == tarumtWiFiIP {
-			return true
-		}
-	}
-	return false
-}
-
-func login(account *Account, retries int) error {
-	data := url.Values{
-		"username": {account.Username},
-		"password": {account.Password},
-		"dst":      {"https://google.com"},
-	}
-
-	client := &http.Client{Timeout: timeout}
-	req, err := http.NewRequest("POST", loginURL, bytes.NewBufferString(data.Encode()))
-	if err != nil {
-		return err
-	}
-
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36")
-	req.Header.Set("Referer", "https://wifi2.tarc.edu.my/")
-	req.Header.Set("Origin", "https://wifi2.tarc.edu.my")
-
-	resp, err := client.Do(req)
-	if err != nil {
-		if retries < maxRetries {
-			fmt.Printf("⚠ Request timed out. Retrying %d/%d...\n", retries+1, maxRetries)
-			return login(account, retries+1)
-		}
-		return err
-	}
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
-		if err != nil {
-		}
-	}(resp.Body)
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-
-	if bytes.Contains(body, []byte("<h1>You are logged in</h1>")) {
-		fmt.Println("✅ Login successful!")
-		return nil
-	}
-	return fmt.Errorf("login failed, please check your username and password")
+	return &config, nil
 }

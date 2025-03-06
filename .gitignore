@@ -1,0 +1,8 @@
+build/
+config.json
+*.exe
+dist/
+bin/
+tarumt-wifi-autoconnect
+*.log
+target/

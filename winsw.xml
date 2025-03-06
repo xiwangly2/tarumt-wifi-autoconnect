@@ -1,0 +1,10 @@
+<service>
+    <id>tarumt-wifi-autoconnect</id>
+    <name>tarumt-wifi-autoconnect</name>
+    <description>tarumt-wifi-autoconnect Service</description>
+    <executable>tarumt-wifi-autoconnect.exe</executable>
+    <arguments>-config ./config.json</arguments>
+    <interactive>false</interactive>
+    <startmode>Automatic</startmode>
+    <log mode="none"/>
+</service>
