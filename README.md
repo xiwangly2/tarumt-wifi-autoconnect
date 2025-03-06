@@ -301,7 +301,7 @@ nohup /root/tarumt-wifi-autoconnect -config=/root/config.json >/dev/null 2>&1 &
 ```
 
 如果一切正常，在`Windows 服务`能看到这个服务：
-![Windows 服务](docs/images/屏幕截图%202023-10-16%20150555.png)
+![Windows 服务](docs/images/img.png)
 
 #### 使用 Docker
 
@@ -383,15 +383,3 @@ ghcr.io/wochaoop/tarumt-wifi-autoconnect:latest
 python 本身只能阉割版的，我懒得弄了
 
 ~~还是 shell 脚本比较通用~~
-
-## 截图
-
-- Pandavan
-  ![截图](docs/images/屏幕截图_20221102_233238.png)
-- OpenWrt
-  -
-    - 记得配置一下防火墙 ~~（要不然被连上路由器的贱人给断网了）~~
-      ![](docs/images/屏幕截图%202023-04-02%20114744.png)
-      ![](docs/images/屏幕截图%202023-04-02%20115446.png)
-      ![](docs/images/屏幕截图%202023-04-02%20115553.png)
-
