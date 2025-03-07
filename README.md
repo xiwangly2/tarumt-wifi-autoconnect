@@ -26,8 +26,7 @@
   "OriginURL": "https://connect.tarc.edu.my",
   "WiFiIP": "2.2.2.2",
   "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36",
-  "MaxAttempts": 12,
-  "AttemptDelay": 5,
+  "AttemptDelay": 600,
   "OnlyOnce": false
 }
 ```
@@ -375,11 +374,3 @@ ghcr.io/wochaoop/tarumt-wifi-autoconnect:latest
 
 [Releases](https://github.com/wochaoop/tarumt-wifi-autoconnect/releases) 中的文件是静态链接的，体积较大，不过通用性较好
 
-## 使用其它的程序
-
-如果上面的 Go 程序不适合您的操作系统，那么您可以尝试我们的旧版方案：
-
-其实还可以写成 python 脚本的，但毕竟我是塞 OpenWrt 系统里用的，我的 Redmi AC2100 路由器是 mips32 的架构，本身才 128M 内存，
-python 本身只能阉割版的，我懒得弄了
-
-~~还是 shell 脚本比较通用~~

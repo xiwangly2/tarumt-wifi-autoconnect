@@ -22,7 +22,6 @@ type Config struct {
 	OriginURL    string `json:"originURL"`
 	WiFiIP       string `json:"WiFiIP"`
 	UserAgent    string `json:"userAgent"`
-	MaxAttempts  int    `json:"max_attempts"`
 	AttemptDelay int    `json:"attemptDelay"`
 	OnlyOnce     bool   `json:"onlyOnce"`
 }
@@ -72,8 +71,8 @@ func loginIfNeeded(config *Config, client *http.Client) {
 
 				req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 				req.Header.Set("User-Agent", config.UserAgent)
-				req.Header.Set("Referer", "https://wifi2.tarc.edu.my/")
-				req.Header.Set("Origin", "https://wifi2.tarc.edu.my")
+				req.Header.Set("Referer", config.RefererURL)
+				req.Header.Set("Origin", config.OriginURL)
 
 				resp, err := client.Do(req)
 				if err != nil {
