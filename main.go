@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -26,25 +27,67 @@ type Config struct {
 	OnlyOnce     bool   `json:"onlyOnce"`
 }
 
+type InterfaceState struct {
+	Name string
+	Up   bool
+}
+
 func main() {
 	configFile := flag.String("config", "./config.json", "Path to the configuration file")
 	flag.Parse()
 
 	config, err := loadConfig(*configFile)
 	if err != nil {
-		fmt.Printf("[%s] Failed to read configuration file: %v\n", currentTime(), err)
+		logMessage(fmt.Sprintf("Failed to read configuration file: %v", err))
 		return
 	}
 
 	client := &http.Client{Timeout: 5 * time.Second}
+	var lastStates []InterfaceState
 
 	for {
-		loginIfNeeded(config, client)
-		if config.OnlyOnce {
-			break
+		currentStates := getInterfaceStates()
+		if hasStateChanged(lastStates, currentStates) {
+			logMessage("Network status changed")
+			loginIfNeeded(config, client)
+			if config.OnlyOnce {
+				break
+			}
 		}
+		lastStates = currentStates
 		time.Sleep(time.Duration(config.AttemptDelay) * time.Second)
 	}
+}
+
+func getInterfaceStates() []InterfaceState {
+	var states []InterfaceState
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		logMessage(fmt.Sprintf("Error getting network interfaces: %v", err))
+		return states
+	}
+
+	for _, iface := range ifaces {
+		state := InterfaceState{
+			Name: iface.Name,
+			Up:   iface.Flags&net.FlagUp != 0,
+		}
+		states = append(states, state)
+	}
+	return states
+}
+
+func hasStateChanged(lastStates, currentStates []InterfaceState) bool {
+	if len(lastStates) != len(currentStates) {
+		return true
+	}
+
+	for i, state := range lastStates {
+		if state.Name != currentStates[i].Name || state.Up != currentStates[i].Up {
+			return true
+		}
+	}
+	return false
 }
 
 func loginIfNeeded(config *Config, client *http.Client) {

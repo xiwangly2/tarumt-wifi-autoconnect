@@ -26,7 +26,7 @@
   "OriginURL": "https://connect.tarc.edu.my",
   "WiFiIP": "2.2.2.2",
   "UserAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36",
-  "AttemptDelay": 600,
+  "AttemptDelay": 10,
   "OnlyOnce": false
 }
 ```
