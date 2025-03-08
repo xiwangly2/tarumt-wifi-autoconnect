@@ -374,3 +374,5 @@ ghcr.io/wochaoop/tarumt-wifi-autoconnect:latest
 
 [Releases](https://github.com/wochaoop/tarumt-wifi-autoconnect/releases) 中的文件是静态链接的，体积较大，不过通用性较好
 
+
+项目的灵感来自于 https://github.com/samleong123/tarumt-wifi-autoconnect
